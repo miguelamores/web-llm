@@ -101,14 +101,28 @@
           cursor: pointer;
           transition: background 0.3s ease;
 
+          &[disabled] {
+            background-color: #ccc;
+            opacity: 0.5;
+            pointer-events: none;
+          }
+
           &:hover {
             background: rgb(0, 104, 173);
           }
         }
       }
+
+      small {
+        position: fixed;
+        bottom: 10px;
+        left: 0;
+        right: 0;
+      }
     </style>
 
     <script type="module">
+      import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
       const $ = (el) => document.querySelector(el);
 
       const $form = $("form");
@@ -117,8 +131,24 @@
       const $messages = $("ul");
       const $container = $("main");
       const $button = $("button");
+      const $modelText = $("small");
 
-      $form.addEventListener("submit", (event) => {
+      const messages = [];
+
+      const selectedModel = "Phi-3-mini-4k-instruct-q4f16_1-MLC-1k";
+
+      const engine = await CreateMLCEngine(selectedModel, {
+        initProgressCallback: (info) => {
+          console.log(info);
+          $modelText.textContent = info.text;
+
+          if (info.progress === 1) {
+            $button.removeAttribute("disabled");
+          }
+        },
+      });
+
+      $form.addEventListener("submit", async (event) => {
         event.preventDefault();
 
         const message = $input.value.trim();
@@ -128,6 +158,17 @@
         }
 
         addMessage(message, "user");
+
+        $button.setAttribute("disabled", true);
+
+        const reply = await engine.chat.completions.create({
+          messages: [...messages, { role: "user", content: message }],
+        });
+
+        console.log(reply);
+        const assistanceResponse = reply.choices[0].message.content;
+        addMessage(assistanceResponse, "bot");
+        $button.removeAttribute("disabled");
       });
 
       function addMessage(text, sender) {
@@ -166,8 +207,10 @@
     </main>
     <form action="">
       <input type="text" />
-      <button>Send</button>
+      <button disabled>Send</button>
     </form>
+
+    <small></small>
 
     <template id="message-template">
       <li class="message">
