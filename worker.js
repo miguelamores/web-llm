@@ -1,5 +1,6 @@
-onmessage = (e) => {
-  console.log(e);
-  console.log(e.data.name);
-  postMessage("hi from the worker");
+import { WebWorkerMLCEngineHandler } from "https://esm.run/@mlc-ai/web-llm";
+
+const handler = new WebWorkerMLCEngineHandler();
+self.onmessage = (msg) => {
+  handler.onmessage(msg);
 };

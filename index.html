@@ -122,7 +122,7 @@
     </style>
 
     <script type="module">
-      import { CreateMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
+      import { CreateWebWorkerMLCEngine } from "https://esm.run/@mlc-ai/web-llm";
       const $ = (el) => document.querySelector(el);
 
       const $form = $("form");
@@ -133,27 +133,23 @@
       const $button = $("button");
       const $modelText = $("small");
 
-      if (window.Worker) {
-        const worker = new Worker("/worker.js");
-        worker.onmessage = (e) => {
-          console.log(e.data);
-        };
-        worker.postMessage({ name: "hi Miguel worker" });
-      }
-
       const messages = [];
       const selectedModel = "Phi-3-mini-4k-instruct-q4f16_1-MLC-1k";
 
-      const engine = await CreateMLCEngine(selectedModel, {
-        initProgressCallback: (info) => {
-          // console.log(info);
-          $modelText.textContent = info.text;
+      const engine = await CreateWebWorkerMLCEngine(
+        new Worker(new URL("./worker.js", import.meta.url), { type: "module" }),
+        selectedModel,
+        {
+          initProgressCallback: (info) => {
+            // console.log(info);
+            $modelText.textContent = info.text;
 
-          if (info.progress === 1) {
-            $button.removeAttribute("disabled");
-          }
-        },
-      });
+            if (info.progress === 1) {
+              $button.removeAttribute("disabled");
+            }
+          },
+        }
+      );
 
       $form.addEventListener("submit", async (event) => {
         event.preventDefault();
@@ -182,7 +178,6 @@
           ],
         });
 
-        console.log(chunks);
         let reply = "";
 
         for await (const chunk of chunks) {
@@ -190,10 +185,10 @@
           const botRes = choice?.delta?.content ?? "";
           reply += botRes;
           botResponse.textContent = reply;
+          $container.scrollTop = $container.scrollHeight;
         }
         const assistantResponse = { role: "assistant", content: reply };
         messages.push(assistantResponse);
-        $container.scrollTop = $container.scrollHeight;
         $button.removeAttribute("disabled");
       });
 
