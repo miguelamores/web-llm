@@ -133,13 +133,20 @@
       const $button = $("button");
       const $modelText = $("small");
 
-      const messages = [];
+      if (window.Worker) {
+        const worker = new Worker("/worker.js");
+        worker.onmessage = (e) => {
+          console.log(e.data);
+        };
+        worker.postMessage({ name: "hi Miguel worker" });
+      }
 
+      const messages = [];
       const selectedModel = "Phi-3-mini-4k-instruct-q4f16_1-MLC-1k";
 
       const engine = await CreateMLCEngine(selectedModel, {
         initProgressCallback: (info) => {
-          console.log(info);
+          // console.log(info);
           $modelText.textContent = info.text;
 
           if (info.progress === 1) {
@@ -150,7 +157,6 @@
 
       $form.addEventListener("submit", async (event) => {
         event.preventDefault();
-
         const message = $input.value.trim();
 
         if (message !== null) {
@@ -158,7 +164,6 @@
         }
 
         addMessage(message, "user");
-
         $button.setAttribute("disabled", true);
 
         const userMessage = {
@@ -186,9 +191,9 @@
           reply += botRes;
           botResponse.textContent = reply;
         }
-        console.log(reply);
         const assistantResponse = { role: "assistant", content: reply };
         messages.push(assistantResponse);
+        $container.scrollTop = $container.scrollHeight;
         $button.removeAttribute("disabled");
       });
 
