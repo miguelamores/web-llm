@@ -161,13 +161,34 @@
 
         $button.setAttribute("disabled", true);
 
-        const reply = await engine.chat.completions.create({
-          messages: [...messages, { role: "user", content: message }],
+        const userMessage = {
+          role: "user",
+          content: message,
+        };
+
+        messages.push(userMessage);
+        const botResponse = addMessage("", "bot");
+
+        const chunks = await engine.chat.completions.create({
+          stream: true,
+          messages: [
+            ...messages,
+            { role: "user", content: userMessage.content },
+          ],
         });
 
+        console.log(chunks);
+        let reply = "";
+
+        for await (const chunk of chunks) {
+          const [choice] = chunk.choices;
+          const botRes = choice?.delta?.content ?? "";
+          reply += botRes;
+          botResponse.textContent = reply;
+        }
         console.log(reply);
-        const assistanceResponse = reply.choices[0].message.content;
-        addMessage(assistanceResponse, "bot");
+        const assistantResponse = { role: "assistant", content: reply };
+        messages.push(assistantResponse);
         $button.removeAttribute("disabled");
       });
 
@@ -185,25 +206,13 @@
         $messages.appendChild($newMessage);
 
         $container.scrollTop = $container.scrollHeight;
+        return $text;
       }
     </script>
   </head>
   <body>
     <main>
-      <ul>
-        <li class="message bot">
-          <span>GPT</span>
-          <p>Esta es la respuesta del bot</p>
-        </li>
-        <li class="message user">
-          <span>You</span>
-          <p>This is the user answer</p>
-        </li>
-        <li class="message user">
-          <span>You</span>
-          <p>This is the user answer and youuuu</p>
-        </li>
-      </ul>
+      <ul></ul>
     </main>
     <form action="">
       <input type="text" />
